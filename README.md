@@ -55,6 +55,10 @@ Events are stored locally at `usr/plugins/mech_calendar/data/events.json` (forma
 
 ## Changelog
 
+### 1.1.8
+- Mobile fix: the event edit sheet is drag-scrollable again — the event drawer's touch scroll-lock no longer cancels drags inside the sheet or the week grid (regression introduced by day-tap auto-open; BUILD 20260905A)
+- Regression tests for the touch-guard whitelist order (suite now 136 tests)
+
 ### 1.1.7
 - Floating windows ("Open as window") now fill their modal and grow when resized — scoped flex chain in the panel wrapper with a 320px min-height floor (docked canvas unaffected)
 - Versioned internal asset URLs (`?v=20260904c`) so service-worker caches can't serve stale panels

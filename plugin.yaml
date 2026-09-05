@@ -1,7 +1,7 @@
 name: mech_calendar
 title: Mech.Calendar
 description: Local month/week calendar with categories, export/import, JSON store, agent handoffs that run agent tasks at event start/finish times.
-version: 1.1.7
+version: 1.1.8
 settings_sections: []
 per_project_config: false
 per_agent_config: false

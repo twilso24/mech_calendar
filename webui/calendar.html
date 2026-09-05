@@ -1321,7 +1321,7 @@
         </div>
     </div>
 
-    <div style="position:fixed;bottom:4px;left:8px;z-index:1;font-size:0.62rem;letter-spacing:1px;color:var(--text-muted);opacity:0.55;pointer-events:none;user-select:none">BUILD 20260904C</div>
+    <div style="position:fixed;bottom:4px;left:8px;z-index:1;font-size:0.62rem;letter-spacing:1px;color:var(--text-muted);opacity:0.55;pointer-events:none;user-select:none">BUILD 20260905A</div>
     <script>
         'use strict';
 
@@ -2528,9 +2528,17 @@
             // Resize handler for dynamic adjustments
             window.addEventListener('resize', handleResize);
 
-            // Prevent body scroll on mobile when interacting with calendar
+            // Prevent body scroll behind the mobile event drawer only.
+            // REGRESSION FIX (BUILD 20260905A): day-tap auto-opens the drawer,
+            // so the edit sheet now regularly sits OVER the active drawer —
+            // the old blanket guard cancelled every touchmove outside the
+            // drawer, killing drag-scrolling inside the sheet and week grid.
+            // The event sheet (#eventModal) and natively scrollable regions
+            // must keep their own touch scrolling.
             document.addEventListener('touchmove', (e) => {
                 if (window.innerWidth <= 1000 && els.sidebar.classList.contains('active')) {
+                    if (els.modal.contains(e.target)) return;      // sheet scrolls itself
+                    if (e_target_is_scrollable(e.target)) return;  // week grid / day cells
                     if (!els.sidebar.contains(e.target)) {
                         e.preventDefault();
                     }

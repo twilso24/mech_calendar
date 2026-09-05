@@ -1,0 +1,58 @@
+<div x-data class="mech-cal-frame-wrap">
+    <style>
+        /* Docked right-canvas panel: the framework supplies a definite
+           height chain, so height:100% fills the docked column. */
+        .mech-cal-frame-wrap {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            min-width: 0;
+            min-height: 320px; /* floor for degenerate hosts */
+        }
+        .mech-cal-frame-wrap iframe {
+            flex: 1 1 auto;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+        /* Floating aux window (surface modal): modals.js imports this panel
+           via openModal(), so html/body height chains do not apply and such
+           selectors must never be used here (styles are cloned into the host
+           page). Instead hand the modal shell height down:
+             .modal-inner (flex column, user-resizable, max 88vh)
+               -> .modal-scroll (flex-grow + column)
+               -> .modal-bd.mech-calendar-modal-body (classes copied from
+                  canvas.html by modals.js; 72vh/680px default, grows)
+               -> x-component (must become a flex column itself)
+               -> .mech-cal-frame-wrap (this wrapper) -> iframe.
+           Without this chain height:100% collapsed to the old 680px cap and
+           tall floating windows kept a dead band below the iframe. */
+        .modal-inner.mech-calendar-modal .modal-scroll {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-inner.mech-calendar-modal .modal-bd.mech-calendar-modal-body {
+            flex: 1 1 auto;
+            min-height: min(72vh, 680px);
+            display: flex;
+        }
+        .modal-inner.mech-calendar-modal .mech-calendar-modal-body > x-component {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        .modal-inner.mech-calendar-modal .mech-cal-frame-wrap {
+            flex: 1 1 auto;
+        }
+        /* While the canvas left edge is resize-dragged, the cursor sweeps across this
+           iframe, which captures pointermove and freezes the drag. Disable hit-testing
+           for the duration — right-canvas-store.js toggles `right-canvas-resizing`
+           on <body>. Mirrors _desktop/webui/desktop-panel.html. */
+        body.right-canvas-resizing .mech-cal-frame-wrap iframe { pointer-events: none; }
+    </style>
+    <iframe src="/plugins/mech_calendar/webui/calendar.html?v=20260904c"
+            title="Calendar" allow="clipboard-write"></iframe>
+</div>

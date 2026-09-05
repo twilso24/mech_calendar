@@ -1,0 +1,10 @@
+# user data — never ship calendar events
+data/
+
+# runtime state
+__pycache__/
+*.pyc
+.toggle-0
+.toggle-1
+config.json
+*.tmp

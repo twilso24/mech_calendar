@@ -1,0 +1,8 @@
+<!-- Mech.Calendar -->
+<div x-data>
+    <button x-move-after=".config-button#dashboard" class="config-button" id="mech-calendar-entry"
+      @click="$store.rightCanvas ? $store.rightCanvas.open('mech_calendar') : window.open('/plugins/mech_calendar/webui/calendar.html', '_blank')"
+      title="Calendar">
+      <span class="material-symbols-outlined">calendar_month</span>
+    </button>
+</div>

@@ -55,6 +55,13 @@ Events are stored locally at `usr/plugins/mech_calendar/data/events.json` (forma
 
 ## Changelog
 
+### 1.1.9
+- Fix: duplicate handoff task cleanup now removes extra tasks by uuid, keeping exactly one live task per handoff identity (previously the surviving task could be deleted too)
+- Fix: an unparseable store file is preserved as `events.corrupt-<timestamp>.json` before reset, so original event data is never silently lost
+- Fix: the calendar tool now reports that agent-created handoffs are not armed and require user confirmation in the UI (previously silently ignored)
+- Fix: uninstalling the plugin now also removes the armed ledger (`data/events.armed.json`)
+- Docs: review-fixes spec added under `docs/specs/review-fixes.md`
+
 ### 1.1.8
 - Mobile fix: the event edit sheet is drag-scrollable again — the event drawer's touch scroll-lock no longer cancels drags inside the sheet or the week grid (regression introduced by day-tap auto-open; BUILD 20260905A)
 - Regression tests for the touch-guard whitelist order (suite now 136 tests)

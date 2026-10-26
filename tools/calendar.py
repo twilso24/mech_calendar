@@ -106,7 +106,10 @@ class CalendarTool(Tool):
                 return Response(message="Error: " + err, break_loop=False)
             index = store.add(date_str, event)
             report = await sync.sync_after_change(store=store)
-            return Response(message="OK: added event {} (id {}, index {}) on {}".format(event["title"], event["id"], index, date_str), break_loop=False)
+            msg = "OK: added event {} (id {}, index {}) on {}".format(event["title"], event["id"], index, date_str)
+            if raw.get("handoff"):
+                msg += ". Handoff not armed: agent-created events cannot arm handoffs; the user must confirm it in the calendar UI."
+            return Response(message=msg, break_loop=False)
 
         if action == "update":
             eid = kwargs.get("id")

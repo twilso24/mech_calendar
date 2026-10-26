@@ -6,6 +6,7 @@ uninstall(): framework calls this before deleting the plugin directory;
 removes every mech_calendar/* scheduled task (no leftover state).
 """
 import asyncio
+import os
 
 from usr.plugins.mech_calendar.helpers import sync
 
@@ -51,3 +52,9 @@ async def uninstall():
             sync._purge_chat(getattr(task, 'context_id', None))
     except Exception as exc:
         print(f"[mech_calendar] uninstall: task cleanup skipped ({exc})")
+    try:
+        ledger = sync._ledger_path(_store())
+        if os.path.exists(ledger):
+            os.remove(ledger)
+    except OSError as exc:
+        print(f"[mech_calendar] uninstall: ledger cleanup skipped ({exc})")

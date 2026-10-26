@@ -353,7 +353,7 @@ async def reconcile(store, scheduler=None, now=None):
     armed = removed = suppressed = updated = 0
     # legacy churn cleanup: exactly one live task per identity
     for dup in duplicates:
-        await scheduler.remove_task_by_name(dup.name)
+        await scheduler.remove_task_by_uuid(dup.uuid)
         if getattr(dup, 'last_run', None) is None:
             _purge_chat(getattr(dup, 'context_id', None))
         removed += 1

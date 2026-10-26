@@ -89,11 +89,24 @@ class EventStore:
     def _v2_backup_path(self) -> str:
         return re.sub(r'\.json$', '.v2.bak.json', self.path)
 
+    def _preserve_unreadable(self):
+        """Copy an unparseable store file aside before it is replaced, so
+        original bytes are never silently lost."""
+        try:
+            if not os.path.exists(self.path):
+                return
+            stamp = datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
+            backup = re.sub(r'\.json$', f'.corrupt-{stamp}.json', self.path)
+            shutil.copy2(self.path, backup)
+        except OSError:
+            pass  # preservation must never break load
+
     def _load(self):
         try:
             with open(self.path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         except (OSError, ValueError):
+            self._preserve_unreadable()
             self._data = {'version': STORE_VERSION, 'rev': 1, 'events': {}}
             return
         if not (isinstance(data, dict) and isinstance(data.get('events'), dict)):

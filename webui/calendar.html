@@ -278,6 +278,29 @@
             background: var(--bg-elevated);
         }
 
+        .all-day-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 4px 8px;
+            min-height: 0;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-surface);
+        }
+        .all-day-strip:empty { display: none; }
+        .all-day-chip {
+            font-size: 0.6rem;
+            padding: 2px 6px;
+            border-left: 3px solid var(--cat-default);
+            background: #000;
+            color: #ddd;
+            cursor: pointer;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
         .calendar-view {
             flex: 1;
             padding: clamp(5px, 1.5vw, 20px);
@@ -412,6 +435,54 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+        }
+
+        .calendar-registry {
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+        }
+
+        .calendar-registry-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .calendar-registry-row {
+            display: grid;
+            grid-template-columns: auto 1fr auto auto;
+            align-items: center;
+            gap: 7px;
+            min-height: 30px;
+            font-size: 0.65rem;
+        }
+
+        .calendar-registry-swatch {
+            width: 10px;
+            height: 10px;
+            border: 1px solid var(--border-bright);
+        }
+
+        .calendar-registry-name {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .calendar-registry-meta {
+            color: var(--text-muted);
+            font-size: 0.55rem;
+            text-transform: uppercase;
+        }
+
+        .calendar-visibility {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-color);
         }
 
         .sidebar h2 {
@@ -1186,33 +1257,17 @@
                         <button class="cat-chip active" data-cat="all">
                             <span class="dot" style="background:#fff"></span>ALL
                         </button>
-                        <button class="cat-chip" data-cat="work">
-                            <span class="dot" style="background:var(--cat-work)"></span>WORK
-                        </button>
-                        <button class="cat-chip" data-cat="personal">
-                            <span class="dot" style="background:var(--cat-personal)"></span>PER
-                        </button>
-                        <button class="cat-chip" data-cat="urgent">
-                            <span class="dot" style="background:var(--cat-urgent)"></span>URG
-                        </button>
-                        <button class="cat-chip" data-cat="social">
-                            <span class="dot" style="background:var(--cat-social)"></span>SOC
-                        </button>
-                        <button class="cat-chip" data-cat="health">
-                            <span class="dot" style="background:var(--cat-health)"></span>HLT
-                        </button>
-                        <button class="cat-chip" data-cat="finance">
-                            <span class="dot" style="background:var(--cat-finance)"></span>FIN
-                        </button>
-                        <button class="cat-chip" data-cat="default">
-                            <span class="dot" style="background:var(--cat-default)"></span>GEN
-                        </button>
                     </div>
                 </div>
+                <div id="allDayStrip" class="all-day-strip"></div>
                 <div class="calendar-view month-view" id="calendarGrid"></div>
             </div>
 
             <div class="sidebar" id="sidebar">
+                <section class="calendar-registry" aria-labelledby="calendarRegistryHeading">
+                    <h2 id="calendarRegistryHeading">Calendars</h2>
+                    <div id="calendarList" class="calendar-registry-list" role="list"></div>
+                </section>
                 <h2>System Log</h2>
                 <div class="selected-date" id="selectedDateDisplay">NO TARGET SELECTED</div>
                 <div class="event-list" id="eventList"></div>
@@ -1256,29 +1311,16 @@
                 </div>
 
                 <div class="form-group">
-                    <label id="catSelectLabel">CATEGORY</label>
-                    <div class="cat-select-grid" id="catSelectGrid" role="radiogroup" aria-labelledby="catSelectLabel" tabindex="0">
-                        <div class="cat-option selected" data-cat="default" style="--cat-color: var(--cat-default)" role="radio" aria-checked="true" tabindex="0">
-                            <span class="dot" style="background:var(--cat-default)"></span>GENERAL
-                        </div>
-                        <div class="cat-option" data-cat="work" style="--cat-color: var(--cat-work)" role="radio" aria-checked="false" tabindex="0">
-                            <span class="dot" style="background:var(--cat-work)"></span>WORK
-                        </div>
-                        <div class="cat-option" data-cat="personal" style="--cat-color: var(--cat-personal)" role="radio" aria-checked="false" tabindex="0">
-                            <span class="dot" style="background:var(--cat-personal)"></span>PERSONAL
-                        </div>
-                        <div class="cat-option" data-cat="urgent" style="--cat-color: var(--cat-urgent)" role="radio" aria-checked="false" tabindex="0">
-                            <span class="dot" style="background:var(--cat-urgent)"></span>URGENT
-                        </div>
-                        <div class="cat-option" data-cat="social" style="--cat-color: var(--cat-social)" role="radio" aria-checked="false" tabindex="0">
-                            <span class="dot" style="background:var(--cat-social)"></span>SOCIAL
-                        </div>
-                        <div class="cat-option" data-cat="health" style="--cat-color: var(--cat-health)" role="radio" aria-checked="false" tabindex="0">
-                            <span class="dot" style="background:var(--cat-health)"></span>HEALTH
-                        </div>
-                        <div class="cat-option" data-cat="finance" style="--cat-color: var(--cat-finance)" role="radio" aria-checked="false" tabindex="0">
-                            <span class="dot" style="background:var(--cat-finance)"></span>FINANCE
-                        </div>
+                    <label for="eventCalendar">CALENDAR</label>
+                    <select id="eventCalendar" required aria-label="Calendar"></select>
+                </div>
+
+                <div class="form-group">
+                    <label id="catSelectLabel">LABEL</label>
+                    <div class="cat-select-grid" id="catSelectGrid" role="radiogroup" aria-labelledby="catSelectLabel" tabindex="0"></div>
+                    <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+                        <input type="text" id="newLabelInput" placeholder="New label..." maxlength="50" style="flex:1;padding:6px 8px;border:1px solid var(--border-color);border-radius:4px;font-size:12px">
+                        <button type="button" class="btn small" id="addLabelBtn" style="padding:6px 12px;font-size:11px">ADD</button>
                     </div>
                 </div>
 
@@ -1328,7 +1370,9 @@
         // ===== CONSTANTS =====
         const STORAGE_KEYS = {
             events: 'mech_events',
-            settings: 'mech_settings'
+            settings: 'mech_settings',
+            visibility: 'mech_calendar_visibility',
+            labels: 'mech_calendar_labels'
         };
 
         // ===== API MODE (active only when served over http/https) =====
@@ -1366,12 +1410,47 @@
             return data;
         }
 
+        async function apiLoadOccurrences() {
+            if (!API_MODE) return;
+            try {
+                const now = state.currentDate;
+                const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                const end = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+                const data = await apiCall({
+                    action: 'occurrences',
+                    window_start: getLocalDateString(start),
+                    window_end: getLocalDateString(end),
+                });
+                if (data && Array.isArray(data.occurrences)) {
+                    const map = {};
+                    data.occurrences.forEach(o => {
+                        if (!map[o.date]) map[o.date] = [];
+                        map[o.date].push(o);
+                    });
+                    state.occurrences = map;
+                }
+            } catch (err) {
+                console.error('Occurrences load failed:', err);
+            }
+        }
+
         async function apiLoadFromServer() {
             try {
                 const data = await apiCall({ action: 'list' });
                 if (data && typeof data.events === 'object' && data.events) {
                     state.events = data.events;
+                    if (data.calendars && typeof data.calendars === 'object') {
+                        state.calendars = data.calendars;
+                    }
+                    applySavedVisibility();
+                    if (Array.isArray(data.labels)) {
+                        state.labels = data.labels;
+                    }
                     state.rev = typeof data.rev === 'number' ? data.rev : state.rev;
+                    localStorage.setItem(STORAGE_KEYS.labels, JSON.stringify(state.labels));
+                    renderCategoryFilter();
+                    renderCategorySelect();
+                    await apiLoadOccurrences();
                     return true;
                 }
             } catch (err) {
@@ -1418,17 +1497,109 @@
             if (stale > 0) showToast(`${stale} handoff${stale > 1 ? 's are' : ' is'} in the past — it will not fire. Set a future date to arm it.`, 'warning');
         }
 
-        const CATEGORIES = {
-            default: { label: 'GENERAL', color: '#ff3b30', cssVar: '--cat-default' },
-            work:    { label: 'WORK',    color: '#007aff', cssVar: '--cat-work' },
-            personal:{ label: 'PERSONAL',color: '#34c759', cssVar: '--cat-personal' },
-            urgent:  { label: 'URGENT',  color: '#ff9500', cssVar: '--cat-urgent' },
-            social:  { label: 'SOCIAL',  color: '#af52de', cssVar: '--cat-social' },
-            health:  { label: 'HEALTH',  color: '#ff2d55', cssVar: '--cat-health' },
-            finance: { label: 'FINANCE', color: '#5ac8fa', cssVar: '--cat-finance' }
-        };
-
         const MONTH_NAMES = ["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
+        function getCategoryColor(cat) {
+            if (!cat) return '';
+            // Use a deterministic color from a palette based on the label text.
+            const palette = ['#ff3b30','#007aff','#34c759','#ff9500','#af52de','#ff2d55','#5ac8fa','#ffcc00','#30b0c7','#a2845e'];
+            let hash = 0;
+            for (let i = 0; i < cat.length; i++) hash = ((hash << 5) - hash + cat.charCodeAt(i)) | 0;
+            return palette[Math.abs(hash) % palette.length];
+        }
+        function getLabelColor(cat) {
+            const found = (state.labels || []).find(l => l.name === cat);
+            if (found && /^#[0-9a-fA-F]{6}$/.test(found.color || '')) return found.color;
+            return getCategoryColor(cat);
+        }
+        function getEventLabel(cat) {
+            return (cat || '').trim();
+        }
+        function getCalendarColor(evt) {
+            var cal = (state.calendars || {})[evt.calendar || 'cal_local'];
+            if (cal && /^#[0-9a-fA-F]{6}$/.test(cal.color || '')) return cal.color;
+            return getCategoryColor(evt.category || '');
+        }
+        function writableCalendars() {
+            return Object.values(state.calendars || {})
+                .filter(calendar => calendar && calendar.writable === true)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+        }
+        function renderCalendarSelect(selectedId) {
+            const select = els.inputs.calendar;
+            if (!select) return;
+            const calendars = writableCalendars();
+            select.innerHTML = '';
+            calendars.forEach(calendar => {
+                const option = document.createElement('option');
+                option.value = calendar.id;
+                option.textContent = calendar.name || calendar.id;
+                select.appendChild(option);
+            });
+            const preferred = selectedId || state.settings.modalCalendar || 'cal_local';
+            if (calendars.some(calendar => calendar.id === preferred)) {
+                select.value = preferred;
+            } else if (calendars.length) {
+                select.value = calendars[0].id;
+            }
+            select.disabled = calendars.length === 0;
+        }
+        function getSelectedCalendar() {
+            const select = els.inputs.calendar;
+            return select && select.value ? select.value : 'cal_local';
+        }
+        function canEditEvent(evt) {
+            const calendar = (state.calendars || {})[evt && evt.calendar || 'cal_local'];
+            return !!calendar && calendar.writable === true;
+        }
+        function renderCategoryFilter() {
+            if (!els.catFilter) return;
+            const active = state.settings.catFilter || 'all';
+            els.catFilter.innerHTML = '';
+            const all = document.createElement('button');
+            all.className = 'cat-chip' + (active === 'all' ? ' active' : '');
+            all.dataset.cat = 'all';
+            all.innerHTML = '<span class="dot" style="background:#fff"></span>ALL';
+            els.catFilter.appendChild(all);
+            (state.labels || []).forEach(label => {
+                const chip = document.createElement('button');
+                chip.className = 'cat-chip' + (active === label.name ? ' active' : '');
+                chip.dataset.cat = label.name;
+                const dot = document.createElement('span');
+                dot.className = 'dot';
+                dot.style.background = /^#[0-9a-fA-F]{6}$/.test(label.color || '') ? label.color : getCategoryColor(label.name);
+                chip.appendChild(dot);
+                chip.appendChild(document.createTextNode(label.name));
+                els.catFilter.appendChild(chip);
+            });
+            if (active !== 'all' && !(state.labels || []).some(l => l.name === active)) {
+                state.settings.catFilter = 'all';
+                saveSettings();
+            }
+        }
+        function renderCategorySelect() {
+            if (!els.catSelectGrid) return;
+            els.catSelectGrid.innerHTML = '';
+            const none = document.createElement('button');
+            none.type = 'button';
+            none.className = 'cat-option';
+            none.dataset.cat = '';
+            none.setAttribute('role', 'radio');
+            none.textContent = 'UNLABELED';
+            els.catSelectGrid.appendChild(none);
+            (state.labels || []).forEach(label => {
+                const opt = document.createElement('button');
+                opt.type = 'button';
+                opt.className = 'cat-option';
+                opt.dataset.cat = label.name;
+                opt.setAttribute('role', 'radio');
+                opt.textContent = label.name;
+                opt.style.borderColor = /^#[0-9a-fA-F]{6}$/.test(label.color || '') ? label.color : getCategoryColor(label.name);
+                els.catSelectGrid.appendChild(opt);
+            });
+        }
+        function isAllDayEvent(evt) {
+            return !evt.time || evt.time === '';
+        }
         const DAY_NAMES = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 
         // ===== STATE =====
@@ -1436,15 +1607,33 @@
             currentDate: new Date(),
             selectedDate: null,
             events: {},
+            calendars: {},
+            labels: [],
+            occurrences: {},
             rev: 0,
             settings: {
                 viewMode: 'month',
                 catFilter: 'all',
-                modalCategory: 'default'
+                modalCategory: ''
             }
         };
 
         // ===== LOAD PERSISTED STATE =====
+        function applySavedVisibility() {
+            // Per-browser calendar visibility: localStorage only, never the server.
+            // Must run after state.calendars is populated (local or server).
+            try {
+                const savedVisibility = JSON.parse(localStorage.getItem(STORAGE_KEYS.visibility) || '{}');
+                Object.keys(savedVisibility).forEach(calId => {
+                    if (state.calendars && state.calendars[calId]) {
+                        state.calendars[calId].visible = savedVisibility[calId];
+                    }
+                });
+            } catch (e) {
+                console.error('Failed to load calendar visibility:', e);
+            }
+        }
+
         function loadState() {
             try {
                 const savedEvents = localStorage.getItem(STORAGE_KEYS.events);
@@ -1464,6 +1653,19 @@
             } catch(e) {
                 console.error('Failed to parse settings:', e);
             }
+            try {
+                const savedLabels = localStorage.getItem(STORAGE_KEYS.labels);
+                if (savedLabels) {
+                    const labels = JSON.parse(savedLabels);
+                    if (Array.isArray(labels)) state.labels = labels;
+                }
+            } catch(e) {
+                console.error('Failed to parse labels:', e);
+            }
+            // Load per-browser calendar visibility from localStorage.
+            // This runs before the async server registry arrives, so reapply
+            // it in apiLoadFromServer() once state.calendars is populated.
+            applySavedVisibility();
             // API MODE: server store is canonical on http(s) origins
             if (API_MODE) {
                 apiLoadFromServer().then((loaded) => {
@@ -1531,6 +1733,7 @@
                 title: document.getElementById('eventTitle'),
                 time: document.getElementById('eventTime'),
                 until: document.getElementById('eventUntil'),
+                calendar: document.getElementById('eventCalendar'),
                 desc: document.getElementById('eventDesc'),
                 handoffEnabled: document.getElementById('handoffEnabled'),
                 handoffAt: document.getElementById('handoffAt'),
@@ -1555,6 +1758,8 @@
             drawerBackdrop: document.getElementById('drawerBackdrop'),
             catFilter: document.getElementById('catFilter'),
             catSelectGrid: document.getElementById('catSelectGrid'),
+            newLabelInput: document.getElementById('newLabelInput'),
+            addLabelBtn: document.getElementById('addLabelBtn'),
             toastContainer: document.getElementById('toastContainer')
         };
 
@@ -1578,6 +1783,66 @@
             } catch(e) {
                 console.error('Failed to save settings:', e);
             }
+        }
+
+        async function saveLabels() {
+            try {
+                localStorage.setItem(STORAGE_KEYS.labels, JSON.stringify(state.labels));
+            } catch (e) {
+                showToast('Failed to save labels locally', 'error');
+                return false;
+            }
+            if (!API_MODE) {
+                renderCategoryFilter();
+                renderCategorySelect();
+                return true;
+            }
+            try {
+                const data = await apiCall({
+                    action: 'labels_save',
+                    labels: state.labels,
+                    base_rev: state.rev
+                });
+                if (Array.isArray(data.labels)) state.labels = data.labels;
+                state.rev = typeof data.rev === 'number' ? data.rev : state.rev;
+                localStorage.setItem(STORAGE_KEYS.labels, JSON.stringify(state.labels));
+                renderCategoryFilter();
+                renderCategorySelect();
+                return true;
+            } catch (err) {
+                if (err && err.message === 'stale') {
+                    await apiLoadFromServer();
+                    showToast('Labels changed elsewhere — latest version loaded', 'warning');
+                } else {
+                    showToast('Label saved locally — server sync failed', 'warning');
+                }
+                return false;
+            }
+        }
+
+        async function addUserLabel() {
+            const input = document.getElementById('newLabelInput');
+            const name = input ? input.value.trim().slice(0, 50) : '';
+            if (!name) {
+                showToast('Label name required', 'error');
+                return;
+            }
+            if ((state.labels || []).some(label => String(label.name).toLowerCase() === name.toLowerCase())) {
+                showToast('Label already exists', 'warning');
+                return;
+            }
+            state.labels.push({
+                id: 'lbl_' + Date.now().toString(36),
+                name: name,
+                color: getCategoryColor(name)
+            });
+            state.settings.modalCategory = name;
+            if (input) input.value = '';
+            await saveLabels();
+            renderCategoryFilter();
+            renderCategorySelect();
+            selectModalCategory(name);
+            showToast('Label added: ' + name, 'success');
         }
 
         // ===== TOAST NOTIFICATIONS =====
@@ -1610,9 +1875,57 @@
 
         // ===== CATEGORY FILTERING =====
         function getFilteredEvents(dateStr) {
-            const evts = state.events[dateStr] || [];
-            if (state.settings.catFilter === 'all') return evts;
-            return evts.filter(e => (e.category || 'default') === state.settings.catFilter);
+            // read-only recurring copies from state.occurrences; never saved back
+            const evts = (state.events[dateStr] || []).concat((state.occurrences || {})[dateStr] || []);
+            const visibleEvents = evts.filter(evt => {
+                const calendar = (state.calendars || {})[evt.calendar || 'cal_local'];
+                return !calendar || calendar.visible !== false;
+            });
+            if (state.settings.catFilter === 'all') return visibleEvents;
+            return visibleEvents.filter(evt => (evt.category || '') === state.settings.catFilter);
+        }
+
+        function renderAllDayStrip() {
+            const strip = document.getElementById('allDayStrip');
+            if (!strip) return;
+            strip.innerHTML = '';
+            const year = state.currentDate.getFullYear();
+            const month = state.currentDate.getMonth();
+            // Determine visible date range
+            let dates = [];
+            if (state.settings.viewMode === 'week') {
+                const ws = getWeekStart(state.currentDate);
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date(ws); d.setDate(d.getDate() + i);
+                    dates.push(getLocalDateString(d));
+                }
+            } else {
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                for (let i = 1; i <= daysInMonth; i++) {
+                    dates.push(getLocalDateString(new Date(year, month, i)));
+                }
+            }
+            const allDayEvents = [];
+            dates.forEach(ds => {
+                const evts = getFilteredEvents(ds);
+                evts.forEach(evt => {
+                    if (isAllDayEvent(evt)) allDayEvents.push({ dateStr: ds, evt });
+                });
+            });
+            if (allDayEvents.length === 0) return;
+            allDayEvents.forEach(({ dateStr, evt }) => {
+                const chip = document.createElement('div');
+                chip.className = 'all-day-chip';
+                chip.style.borderLeftColor = getCalendarColor(evt);
+                chip.textContent = `${evt.title} (${dateStr.slice(5)})`;
+                chip.addEventListener('click', () => {
+                    state.selectedDate = parseDateStr(dateStr);
+                    renderCalendar();
+                    renderSidebar();
+                });
+                strip.appendChild(chip);
+            });
         }
 
         // ===== RENDER: CALENDAR =====
@@ -1636,6 +1949,7 @@
             els.grid.className = 'calendar-view month-view';
             els.grid.innerHTML = '';
 
+            renderAllDayStrip();
             // Day headers
             DAY_NAMES.forEach(d => {
                 const div = document.createElement('div');
@@ -1694,6 +2008,7 @@
 
             els.grid.className = 'calendar-view week-view';
             els.grid.innerHTML = '';
+            renderAllDayStrip();
 
             DAY_NAMES.forEach(d => {
                 const div = document.createElement('div');
@@ -1737,6 +2052,9 @@
             if (evts.length === 0) return;
 
             const sorted = evts.slice().sort((a, b) => {
+                const aAllDay = isAllDayEvent(a) ? 0 : 1;
+                const bAllDay = isAllDayEvent(b) ? 0 : 1;
+                if (aAllDay !== bAllDay) return aAllDay - bAllDay;
                 const ta = a.time || '99:99';
                 const tb = b.time || '99:99';
                 return ta.localeCompare(tb);
@@ -1746,15 +2064,17 @@
             const remaining = sorted.length - shown.length;
 
             shown.forEach(evt => {
-                const cat = evt.category || 'default';
-                const catColor = CATEGORIES[cat] ? CATEGORIES[cat].color : CATEGORIES.default.color;
+                const cat = (evt.category || '').trim();
+                const evtColor = getCalendarColor(evt);
                 const ediv = document.createElement('div');
                 ediv.className = 'event-marker';
-                ediv.style.setProperty('--cat-default', catColor);
-                ediv.style.borderLeftColor = catColor;
+                ediv.style.setProperty('--cat-default', evtColor);
+                ediv.style.borderLeftColor = evtColor;
 
                 let html = '';
-                if (evt.time) {
+                if (isAllDayEvent(evt)) {
+                    html += `<span class="event-time all-day">ALL-DAY</span>`;
+                } else if (evt.time) {
                     html += `<span class="event-time">${escapeHtml(formatTime(evt.time))}</span>`;
                 }
                 html += escapeHtml(evt.title);
@@ -1791,6 +2111,68 @@
         }
 
         // ===== RENDER: SIDEBAR =====
+        function renderCalendars() {
+            const list = document.getElementById('calendarList');
+            if (!list) return;
+            list.innerHTML = '';
+            const calendars = Object.values(state.calendars || {})
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+            if (calendars.length === 0) {
+                list.innerHTML = '<div class="no-data">// NO CALENDARS</div>';
+                return;
+            }
+            calendars.forEach(calendar => {
+                const row = document.createElement('div');
+                row.className = 'calendar-registry-row';
+                row.setAttribute('role', 'listitem');
+
+                const swatch = document.createElement('span');
+                swatch.className = 'calendar-registry-swatch';
+                swatch.style.backgroundColor = /^#[0-9a-fA-F]{6}$/.test(calendar.color || '')
+                    ? calendar.color : '#777777';
+                swatch.setAttribute('aria-hidden', 'true');
+
+                const label = document.createElement('span');
+                label.className = 'calendar-registry-name';
+                label.textContent = calendar.name || calendar.id;
+                label.title = `${calendar.source || 'local'} · ${calendar.count || 0} events`;
+
+                const meta = document.createElement('span');
+                meta.className = 'calendar-registry-meta';
+                meta.textContent = `${calendar.source || 'local'} · ${calendar.count || 0} · ${calendar.writable ? 'WRITE' : 'READ ONLY'}`;
+
+                const visibility = document.createElement('input');
+                visibility.type = 'checkbox';
+                visibility.className = 'calendar-visibility';
+                visibility.checked = calendar.visible !== false;
+                visibility.setAttribute('aria-label', `Show ${calendar.name || calendar.id}`);
+                // calendar visible checkbox aria-label is a display preference, not an edit permission.
+                visibility.addEventListener('change', () => {
+                    toggleCalendarVisibility(calendar.id, visibility.checked);
+                });
+
+                row.append(swatch, label, meta, visibility);
+                list.appendChild(row);
+            });
+        }
+
+        function toggleCalendarVisibility(calendarId, visible) {
+            const calendar = state.calendars && state.calendars[calendarId];
+            if (!calendar) return;
+            calendar.visible = visible;
+            // Visibility is a per-browser preference: persist to localStorage only,
+            // never to the shared server store.
+            try {
+                const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.visibility) || '{}');
+                saved[calendarId] = visible;
+                localStorage.setItem(STORAGE_KEYS.visibility, JSON.stringify(saved));
+            } catch (e) {
+                console.error('Failed to save calendar visibility:', e);
+            }
+            renderCalendar();
+            renderCalendars();
+        }
+
         // ===== AGENT HANDOFFS PANEL =====
         let handoffPanelBound = false;
 
@@ -1870,6 +2252,7 @@
 
         function renderSidebar() {
             initHandoffPanel();
+            renderCalendars();
             renderHandoffs();
             const dateStr = state.selectedDate ? getLocalDateString(state.selectedDate) : null;
             els.dateDisplay.textContent = dateStr ? `TARGET: ${dateStr}` : 'NO TARGET SELECTED';
@@ -1898,26 +2281,28 @@
             sorted.forEach(evt => {
                 const allEvts = state.events[dateStr] || [];
                 const realIndex = allEvts.indexOf(evt);
-                if (realIndex === -1) return;
+                // Recurring copies (read-only overlay) use idx -1 and delete their whole series
+                const isCopy = realIndex === -1;
+                if (isCopy && !evt.recurring) return;
 
-                const cat = evt.category || 'default';
-                const catInfo = CATEGORIES[cat] || CATEGORIES.default;
+                const cat = (evt.category || '').trim();
+                const catColor = cat ? getCategoryColor(cat) : '#8e8e93';
 
                 const div = document.createElement('div');
                 div.className = 'event-card';
-                div.style.setProperty('--cat-color', catInfo.color);
+                div.style.setProperty('--cat-color', catColor);
 
                 // XSS-SAFE: Using textContent / escaped HTML
                 div.innerHTML = `
                     <div class="event-card-header">
                         <span class="event-card-title"></span>
                         <div class="event-actions">
-                            <button class="event-action-btn" data-action="edit" data-date="${escapeHtml(dateStr)}" data-idx="${realIndex}">EDIT</button>
-                            <button class="event-action-btn" data-action="delete" data-date="${escapeHtml(dateStr)}" data-idx="${realIndex}">DEL</button>
+                            ${!isCopy && canEditEvent(evt) ? `<button class="event-action-btn" data-action="edit" data-date="${escapeHtml(dateStr)}" data-idx="${realIndex}">EDIT</button>` : ''}
+                            ${canEditEvent(evt) ? `<button class="event-action-btn" data-action="${isCopy ? 'delete-series' : 'delete'}" data-date="${escapeHtml(dateStr)}" data-idx="${realIndex}" data-id="${escapeHtml(evt.id || '')}">DEL</button>` : ''}
                         </div>
                     </div>
                     <div class="event-card-meta">
-                        <span class="event-card-cat" style="background:${catInfo.color}">${escapeHtml(catInfo.label)}</span>
+                        ${cat ? `<span class="event-card-cat" style="background:${getLabelColor(cat)}">${escapeHtml(getEventLabel(cat))}</span>` : ''}
                         ${evt.time ? `<span class="event-card-time">${escapeHtml(formatTime(evt.time))}</span>` : ''}
                     </div>
                     <div class="event-card-desc"></div>
@@ -1946,6 +2331,8 @@
                         openEditModal(dStr, idx);
                     } else if (action === 'delete') {
                         deleteEvent(dStr, idx);
+                    } else if (action === 'delete-series') {
+                        deleteSeries(btn.dataset.id);
                     }
                 });
             });
@@ -1978,6 +2365,32 @@
             });
         }
 
+        // Delete a whole recurring series (master id) after confirmation
+        function deleteSeries(seriesId) {
+            if (!seriesId) return;
+            let title = '';
+            Object.values(state.events).forEach(list => list.forEach(e => {
+                if (!title && e.id === seriesId) title = e.title;
+            }));
+            const ok = window.confirm(`Delete the whole recurring series '${title || 'event'}' and all its occurrences? It will also be removed from Google Primary.`);
+            if (!ok) return;
+            let removed = false;
+            Object.keys(state.events).forEach(d => {
+                const before = state.events[d].length;
+                state.events[d] = state.events[d].filter(e => {
+                    if (e.id === seriesId) { title = title || e.title; return false; }
+                    return true;
+                });
+                if (state.events[d].length !== before) removed = true;
+                if (state.events[d].length === 0) delete state.events[d];
+            });
+            if (!removed) return;
+            saveEvents();
+            showToast(`Deleted series: ${title}`, 'warning');
+            renderCalendar();
+            renderSidebar();
+        }
+
         // ===== MODAL =====
         let modalOpener = null; // element to restore focus to on close
 
@@ -1992,19 +2405,21 @@
             els.inputs.title.value = '';
             els.inputs.time.value = '';
             els.inputs.until.value = '';
+            renderCalendarSelect(state.settings.modalCalendar || 'cal_local');
             els.inputs.desc.value = '';
             els.inputs.handoffEnabled.checked = false;
             els.handoffFields.style.display = 'none';
             els.inputs.handoffAt.value = 'start';
             els.inputs.handoffPrompt.value = '';
             els.inputs.handoffLead.value = '0';
-            selectModalCategory(state.settings.modalCategory || 'default');
+            renderCategorySelect();
+            selectModalCategory(state.settings.modalCategory || '');
             modalOpener = document.activeElement;
             els.modal.classList.add('active');
             setTimeout(() => els.inputs.title.focus(), 100);
         }
 
-        function openEditModal(dateStr, index) {
+        function openEditModal(dateStr, index) { // eventCalendar picker is populated below
             const evt = state.events[dateStr] && state.events[dateStr][index];
             if (!evt) return;
             editingEventId = evt.id || null;
@@ -2015,6 +2430,7 @@
             els.inputs.title.value = evt.title || '';
             els.inputs.time.value = evt.time || '';
             els.inputs.until.value = evt.until || '';
+            renderCalendarSelect(evt.calendar || 'cal_local');
             els.inputs.desc.value = evt.desc || '';
             const ho = evt.handoff || {};
             els.inputs.handoffEnabled.checked = !!evt.handoff;
@@ -2022,7 +2438,8 @@
             els.inputs.handoffAt.value = ho.at || 'start';
             els.inputs.handoffPrompt.value = ho.prompt || '';
             els.inputs.handoffLead.value = String(ho.lead_minutes || 0);
-            selectModalCategory(evt.category || 'default');
+            renderCategorySelect();
+            selectModalCategory(evt.category || '');
             modalOpener = document.activeElement;
             els.modal.classList.add('active');
             setTimeout(() => els.inputs.title.focus(), 100);
@@ -2050,7 +2467,7 @@
 
         function getSelectedModalCategory() {
             const selected = els.catSelectGrid.querySelector('.cat-option.selected');
-            return selected ? selected.dataset.cat : 'default';
+            return selected ? selected.dataset.cat : '';
         }
 
         // ===== EXPORT / IMPORT =====
@@ -2097,7 +2514,7 @@
                             if (!ev || typeof ev !== 'object') continue;
                             if (typeof ev.title !== 'string' || !ev.title.trim()) continue;
                             if (ev.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(ev.time)) { ev.time = ''; }
-                            if (ev.category && !CATEGORIES[ev.category]) { ev.category = 'default'; }
+                            ev.category = typeof ev.category === 'string' ? ev.category.trim().slice(0, 50) : '';
                             if (ev.desc && typeof ev.desc !== 'string') { ev.desc = ''; }
                             valid.push(ev);
                         }
@@ -2312,7 +2729,7 @@
         function handleTouchEnd(e) {
             touchEndX = e.changedTouches[0].screenX;
             touchEndY = e.changedTouches[0].screenY;
-            handleSwipeGesture();
+            handleSwipeGesture(e.target);
         }
 
         function handleSwipeGesture(targetEl) {
@@ -2385,6 +2802,7 @@
                     title: els.inputs.title.value.trim(),
                     time: els.inputs.time.value || '',
                     until: els.inputs.until.value || '',
+                    calendar: getSelectedCalendar(),
                     category: getSelectedModalCategory(),
                     desc: els.inputs.desc.value.trim()
                 };
@@ -2461,8 +2879,10 @@
             });
 
             // Category select grid
-            els.catSelectGrid.querySelectorAll('.cat-option').forEach(opt => {
-                opt.addEventListener('click', () => selectModalCategory(opt.dataset.cat));
+            els.catSelectGrid.addEventListener('click', (ev) => {
+                const opt = ev.target.closest('.cat-option');
+                if (!opt) return;
+                selectModalCategory(opt.dataset.cat);
             });
 
             // FIX: keyboard support for the category radiogroup
@@ -2488,17 +2908,28 @@
                 }
             });
 
-            // Category filter
-            els.catFilter.querySelectorAll('.cat-chip').forEach(chip => {
-                chip.addEventListener('click', () => {
-                    state.settings.catFilter = chip.dataset.cat;
-                    saveSettings();
-                    els.catFilter.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
-                    chip.classList.add('active');
-                    renderCalendar();
-                    renderSidebar();
-                });
+            // Category filter is rendered from the user-label registry.
+            els.catFilter.addEventListener('click', (ev) => {
+                const chip = ev.target.closest('.cat-chip');
+                if (!chip) return;
+                state.settings.catFilter = chip.dataset.cat || 'all';
+                saveSettings();
+                renderCategoryFilter();
+                renderCalendar();
+                renderSidebar();
             });
+
+            if (els.addLabelBtn) {
+                els.addLabelBtn.addEventListener('click', addUserLabel);
+            }
+            if (els.newLabelInput) {
+                els.newLabelInput.addEventListener('keydown', (ev) => {
+                    if (ev.key === 'Enter') {
+                        ev.preventDefault();
+                        addUserLabel();
+                    }
+                });
+            }
 
             // Export / Import
             els.btns.exportData.addEventListener('click', exportData);
@@ -2522,7 +2953,6 @@
             }, { passive: true });
             calArea.addEventListener('touchend', (ev) => {
                 handleTouchEnd(ev);
-                handleSwipeGesture(ev.target);
             }, { passive: true });
 
             // Resize handler for dynamic adjustments
@@ -2563,15 +2993,15 @@
         // ===== INIT =====
         function init() {
             loadState();
+            renderCategoryFilter();
+            renderCategorySelect();
             bindEvents();
 
             // Apply persisted settings
             setViewMode(state.settings.viewMode);
 
-            // Restore category filter
-            els.catFilter.querySelectorAll('.cat-chip').forEach(c => {
-                c.classList.toggle('active', c.dataset.cat === state.settings.catFilter);
-            });
+            // Restore the user-label filter after dynamic rendering.
+            renderCategoryFilter();
 
             renderCalendar();
             renderSidebar();

@@ -1,14 +1,19 @@
 # Mech.Calendar
 
-A local month/week calendar for Agent Zero — categories, export/import, keyboard-first navigation, and a JSON event store served by a plugin-native API.
+A local month/week calendar for Agent Zero — multiple calendars with colors and visibility, user-defined labels, Google Calendar two-way sync, export/import, keyboard-first navigation, agent handoffs that run agent tasks at event start/finish times, and a JSON event store served by a plugin-native API.
 
 ## Features
 
-- Month, week, and all-events views with keyboard navigation
-- Seven event categories (default/work/personal/urgent/social/health/finance)
+- Month and week views with keyboard navigation
+- Calendar registry: name, color, visibility, writable flag, source — per-browser visibility in localStorage only
+- User-defined labels (no fixed presets) — add/rename/delete with color; events keep the internal `category` field for API/Google-sync compatibility
+- All-day strip above the day grid; event markers in day cells use the calendar color; all-day events appear in both
+- Event editor calendar picker: only writable calendars offered; read-only calendars show no edit/delete
+- Google Calendar two-way sync (discovered user-named calendars; default sync set is primary + detected Holidays unless a calendar is chosen, incremental sync tokens, import + push with If-Match conflicts, 10-minute poller, RRULE occurrence expansion, loopback-only OAuth callback on 127.0.0.1)
+- Agent handoffs: UI and Google-origin events with an explicit handoff arm scheduled tasks (agent-origin events never auto-arm)
 - Client-side JSON export/import
 - All-day (`time` empty) and timed events, strict 24h `HH:MM` validation
-- Server-side JSON store with atomic writes — data survives restarts
+- Server-side JSON store (schema v6, cross-instance locking, reload-before-mutation, rev-guarded bulk writes) with atomic writes — data survives restarts
 - Runs inside Agent Zero: auth + CSRF handled by the framework
 
 ## Open
@@ -30,37 +35,36 @@ X-CSRF-Token: <token from GET /api/csrf_token>
 
 | Action | Input | Returns |
 |---|---|---|
-| `list` | `{}` | `{ok, events}` |
-| `add` | `{date, event}` | `{ok, date, index}` |
-| `replace` | `{events}` | `{ok}` (bulk, sanitized) |
-| `delete_date` | `{date}` | `{ok}` |
-| `delete_index` | `{date, index}` | `{ok}` |
+| `list` | `{}` | `{ok, rev, events, calendars, labels}` |
+| `add` / `update` | `{date, event}` | `{ok, rev, date, id, sync}` |
+| `replace` | `{events, base_rev}` | `{ok, rev, events, sync}`; stale `base_rev` → `{ok: false, error: "stale"}` |
+| `delete` / `delete_index` / `delete_date` | `{id}` / `{date, index}` / `{date}` | `{ok, rev, sync}` |
+| `calendars` / `calendars_save` / `calendar_save` | `{}` / `{calendars, base_rev}` | calendar registry (server-owned `writable`/`source`/`google_calendar_id` preserved) |
+| `labels_save` | `{labels, base_rev}` | user label registry; renames propagate to events, deletes unlabel events |
+| `google_sync` | `{action: status|connect|callback|disconnect|sync|list_calendars|set_calendar}` | Google Calendar sync; tokens never returned |
 
-Event limits: `title` ≤ 200 chars (required), `desc` ≤ 2000, `time` optional strict 24h on `add` / normalized on `replace`, `category` from the fixed set (unknown → `default`).
+Event limits: `title` ≤ 200 chars (required), `desc` ≤ 2000, `time` optional strict 24h on `add`/`update` / normalized on `replace`, `category` is a user label name (free-form, ≤50 chars; empty = unlabeled; legacy `default` migrates to unlabeled). Google-origin events keep `google_id` and `origin: google`.
 
 ## Data & Privacy
 
-Events are stored locally at `usr/plugins/mech_calendar/data/events.json` (format `{version: 3, rev: <n>, events: {date: [event, ...]}}`; `rev` bumps on every mutation and guards stale writers). The `data/` directory is gitignored — **no calendar data is ever shipped with the plugin**. Uninstalling removes the plugin; export your data first if you want to keep it.
+Events are stored locally at `usr/plugins/mech_calendar/data/events.json` (format `{version: 6, rev: <n>, calendars: {...}, labels: [...], events: {date: [event, ...]}}`; `rev` bumps on every mutation and guards stale writers; Google sync mapping lives alongside it). The `data/` directory is gitignored — **no calendar data is ever shipped with the plugin**. Uninstalling removes the plugin; export your data first if you want to keep it. Google OAuth tokens are stored outside the repo by `helpers/google_auth.py`.
 
 ## Roadmap
 
-- v1.1.5 — ✅ shipped (found via live-fire E2E): fired-task guards — after a handoff fires, calendar edits within the grace window no longer rewrite its plan (which would have made the task instantly due and refire forever); removing a fired task now PRESERVES its dedicated chat (the transcript is the handoff's output); time-edits of fired handoffs re-arm cleanly under the same identity. Backend-only (no UI change).
-- v1.1.4 — ✅ shipped: stable task identity — every handoff now owns ONE permanent task + chat identity (`mcal_<hash>` derived from event id + kind). Edits update the task in place (same uuid, same chat, same sidebar row) instead of delete+re-add. Fixes: ghost-chat spam (each toggle/edit used to mint a new dedicated chat; 11 purged), "Task not found" in the Tasks panel (uuid churn), and task deletions/disarms now clean up the dedicated chat like the framework's own delete API. Legacy duplicate identities are deduped; ≤v1.1.3 armed-ledger keys migrate transparently; `updated` count surfaces in the save toast.
-- v1.1.3 — ✅ shipped: automation workflow fix — store revision guard (`rev` + `base_rev` on `replace`) ends the stale-surface wipe loop that erased handoffs (a conflicting calendar surface now reloads instead of overwriting); past-dated handoffs are reported via `skipped_stale` + toast instead of being silently skipped; automation proven live (fee-deadline handoff armed through the real scheduler)
-- v1.1.2 — ✅ shipped: re-arm intent — calendar edits that add or change a handoff clear the deletion tombstone and re-arm the task (previously, after deleting a task in the Tasks panel, re-saving the same handoff could never re-arm it). UI: empty-prompt guard (handoff needs the agent prompt) and id-resolved edit merge (async state adoption can no longer retarget or silently drop an edit).
-- v1.1.1 — ✅ shipped: handoff sync respects user deletions — deleting a `mech_calendar/*` task in the Tasks panel now sticks (armed-ledger with content fingerprints; previously the next calendar change resurrected it). Handoff prompt edits also propagate to already-armed tasks.
-- v1.1 — ✅ shipped: stable event ids, scheduler handoff (events arm agent tasks at start/finish times, editable in the GUI via the AGENT HANDOFF section), `calendar` agent tool + bundled `mech-calendar` skill
-- v1.2 — native A0 UI integration (Alpine store, toasts, sidebar entry, settings)
-- v1.3 — multi-calendar, iCal import/export, sharing
+- v1.2.0 — ✅ shipped: Calendar.app parity + labels + Google two-way sync (see Changelog)
+- v1.3 — iCal import/export, sharing
 
 ## Changelog
 
-### 1.1.9
-- Fix: duplicate handoff task cleanup now removes extra tasks by uuid, keeping exactly one live task per handoff identity (previously the surviving task could be deleted too)
-- Fix: an unparseable store file is preserved as `events.corrupt-<timestamp>.json` before reset, so original event data is never silently lost
-- Fix: the calendar tool now reports that agent-created handoffs are not armed and require user confirmation in the UI (previously silently ignored)
-- Fix: uninstalling the plugin now also removes the armed ledger (`data/events.armed.json`)
-- Docs: review-fixes spec added under `docs/specs/review-fixes.md`
+### 1.2.0
+- Calendar registry (schema v5→v6): name, color, visibility, writable, source, `google_calendar_id`; sidebar list with color swatches, source, counts, and per-browser visibility (localStorage only, reapplied after async server load)
+- User-defined labels replace the seven fixed category presets (fresh stores start empty; v5 values migrate to labels; legacy `default` migrates to unlabeled; internal field stays `category`)
+- All-day strip above the grid + all-day markers in day cells, so strip and grid always agree; event markers use calendar color
+- Event editor calendar picker (writable calendars only); read-only calendars show no edit/delete; unknown calendar IDs rejected
+- Google Calendar two-way sync: discovered user-named calendars (default sync set is primary + detected Holidays unless a calendar is chosen), incremental sync tokens with 410 full-resync, push with If-Match (Google wins conflicts), 10-minute poller, RRULE occurrence expansion, loopback-only OAuth callback (`127.0.0.1`), explicit calendar validation, sanitized sync errors
+- Handoffs now arm for Google-origin events with an explicit UI handoff (agent-origin stays excluded); Google re-import preserves local handoffs; manual sync and background poller reconcile handoffs after every import
+- Store hardening: cross-instance file locking, reload-before-mutation, rev-guarded bulk calendar/label saves, defensive handoff parsing, case-insensitive label uniqueness
+- Suite: 372 passing (project) / plugin contract tests green
 
 ### 1.1.8
 - Mobile fix: the event edit sheet is drag-scrollable again — the event drawer's touch scroll-lock no longer cancels drags inside the sheet or the week grid (regression introduced by day-tap auto-open; BUILD 20260905A)

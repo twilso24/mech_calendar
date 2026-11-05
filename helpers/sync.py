@@ -73,6 +73,11 @@ def task_name(event, kind):
     return f'{TASK_PREFIX}{title} ({kind}) [{eid}]'
 
 
+def _handoff_eligible(event):
+    """Only ui/google events may arm; agent events never auto-arm."""
+    return event.get('origin') in ('ui', 'google')
+
+
 def desired_tasks(store, now=None):
     """[(name, when, event)] every handoff that should currently be armed."""
     if now is None:
@@ -80,7 +85,7 @@ def desired_tasks(store, now=None):
     wanted = []
     for date_str, day in store.get()['events'].items():
         for event in day:
-            if event.get('origin') != 'ui':
+            if not _handoff_eligible(event):
                 continue  # agent-authored events never auto-arm
             for kind, when in fire_times(date_str, event):
                 if should_arm(when, now=now):
@@ -257,7 +262,11 @@ def _handoff_sig(event):
     h = event.get('handoff') if isinstance(event, dict) else None
     if not isinstance(h, dict):
         return None
-    return (h.get('at'), str(h.get('prompt') or '').strip(), int(h.get('lead_minutes') or 0))
+    try:
+        lead = int(h.get('lead_minutes') or 0)
+    except (TypeError, ValueError):
+        return None
+    return (h.get('at'), str(h.get('prompt') or '').strip(), lead)
 
 
 def rearm_ids(old_events, new_events):
@@ -316,7 +325,7 @@ def count_stale(store, now=None):
     count = 0
     for date_str, day in store.get()['events'].items():
         for event in day:
-            if event.get('origin') != 'ui':
+            if not _handoff_eligible(event):
                 continue
             for _kind, when in fire_times(date_str, event):
                 if not should_arm(when, now=now):

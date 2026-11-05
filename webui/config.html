@@ -1,0 +1,168 @@
+<html>
+<head>
+  <title>Google Calendar</title>
+  <script type='module'>
+    import { toastFrontendError, toastFrontendSuccess } from '/components/notifications/notification-store.js';
+    window.gcalToast = { error: toastFrontendError, success: toastFrontendSuccess };
+    window.gcal = () => ({
+      clientId: '',
+      clientSecret: '',
+      redirectUrl: '',
+      authCode: '',
+      calendars: [],
+      calendarId: '',
+      status: 'UNKNOWN',
+      busy: false,
+      credsAuto: false,
+      async post(url, body) {
+        const tokenResp = await fetch('/api/csrf_token', { cache: 'no-store' });
+        const tokenData = await tokenResp.json();
+        const resp = await fetch(url, {
+          method: 'POST',
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': tokenData.token || '' },
+          body: JSON.stringify(body)
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || data.ok === false) throw new Error(data.error || ('HTTP ' + resp.status));
+        return data;
+      },
+      async api(action, extra) {
+        return this.post('/api/plugins/mech_calendar/google_sync', Object.assign({ action: action }, extra || {}));
+      },
+      async init() {
+        await this.refresh();
+      },
+      async refresh() {
+        try {
+          const d = await this.api('status');
+          this.status = (d.connected ? 'CONNECTED' : 'DISCONNECTED') + (d.last_error ? ' | ERROR: ' + d.last_error : ''); if (d.last_error && d.last_error.indexOf('reconnect required') === 0) { window.gcalToast.error('Google token expired or invalid. Click Connect to re-authorize.', 'Google Calendar'); }
+          this.credsAuto = !!d.credentials_available;
+          if (d.connected) {
+            await this.loadCalendars();
+          } else {
+            this.calendars = [];
+          }
+        } catch (e) {
+          this.status = 'ERROR';
+          window.gcalToast.error('Status failed: ' + e.message, 'Google Calendar');
+        }
+      },
+      async loadCalendars() {
+        try {
+          const d = await this.api('list_calendars');
+          this.calendars = d.calendars || [];
+          const primary = this.calendars.find(c => c.primary);
+          if (!this.calendarId && primary) this.calendarId = primary.id;
+        } catch (e) {
+          this.calendars = [];
+        }
+      },
+      async setCalendar() {
+        if (!this.calendarId) return;
+        this.busy = true;
+        try {
+          await this.api('set_calendar', { calendar_id: this.calendarId });
+          window.gcalToast.success('Calendar selected', 'Google Calendar');
+        } catch (e) {
+          window.gcalToast.error('Calendar select failed: ' + e.message, 'Google Calendar');
+        } finally {
+          this.busy = false;
+        }
+      },
+      async connect() {
+        // Backend resolves credentials from secrets when fields are empty.
+        this.busy = true;
+        try {
+          const d = await this.api('connect', {
+            client_id: this.clientId,
+            client_secret: this.clientSecret,
+            scopes: ['https://www.googleapis.com/auth/calendar']
+          });
+          if (d.auth_url) window.open(d.auth_url, '_blank');
+          window.gcalToast.success('Waiting for browser authorization on this machine', 'Google Calendar');
+          setTimeout(() => this.refresh(), 1500);
+        } catch (e) {
+          window.gcalToast.error('Connect failed: ' + e.message, 'Google Calendar');
+        } finally {
+          this.busy = false;
+        }
+      },
+      async finishCallback() {
+         if (!this.redirectUrl && !this.authCode) return;
+         this.busy = true;
+         try {
+           const d = await this.api('callback', {
+             redirect_url: this.redirectUrl,
+             code: this.authCode
+           });
+           if (d.connected || d.ok) {
+             window.gcalToast.success('Google Calendar connected', 'Google Calendar');
+             this.redirectUrl = '';
+             this.authCode = '';
+             await this.refresh();
+           } else {
+             window.gcalToast.error('Connect failed: ' + (d.error || 'unknown'), 'Google Calendar');
+           }
+         } catch (e) {
+           window.gcalToast.error('Connect failed: ' + e.message, 'Google Calendar');
+         } finally {
+           this.busy = false;
+         }
+       },
+      async syncNow() {
+        this.busy = true;
+        try {
+          const d = await this.api('sync');
+          window.gcalToast.success('Sync complete', 'Google Calendar');
+          await this.refresh();
+        } catch (e) {
+          window.gcalToast.error('Sync failed: ' + e.message, 'Google Calendar');
+        } finally {
+          this.busy = false;
+        }
+      },
+      async disconnect() {
+        this.busy = true;
+        try {
+          await this.api('disconnect');
+          window.gcalToast.success('Google Calendar disconnected', 'Google Calendar');
+          await this.refresh();
+        } catch (e) {
+          window.gcalToast.error('Disconnect failed: ' + e.message, 'Google Calendar');
+        } finally {
+          this.busy = false;
+        }
+      }
+    });
+  </script>
+</head>
+<body>
+  <div x-data='gcal()' x-init='init()'>
+    <div class='gcal-settings'>
+      <div class='section-title'>Google Calendar</div>
+      <p>Status: <span x-text='status'></span></p>
+      <template x-if='credsAuto'><p style='color:var(--text-secondary);font-size:0.85em'>Credentials auto-detected from secrets store. Manual entry optional.</p></template>
+      <p>Use a Google Desktop app OAuth client. The browser used for authorization must run on the same machine as Agent Zero so Google can return through the local loopback callback.</p>
+      <label>OAuth client ID</label>
+      <input type='text' x-model='clientId' autocomplete='off'>
+      <label>OAuth client secret (kept in memory only)</label>
+      <input type='password' x-model='clientSecret' autocomplete='off'>
+      <button type='button' class='btn' :disabled='busy' @click='connect()'>Connect</button>
+      <p style='color:var(--text-secondary);font-size:0.85em;margin-top:0.5em'>If the browser cannot reach Agent Zero (remote setup), paste the full redirect URL from the browser address bar:</p>
+      <label>Redirect URL (optional)</label>
+      <input type='text' x-model='redirectUrl' autocomplete='off' placeholder='http://127.0.0.1:port/...?code=...&state=...'>
+      <label>Authorization code (optional)</label>
+      <input type='text' x-model='authCode' autocomplete='off' placeholder='Paste the code if the redirect URL is unavailable'>
+      <button type='button' class='btn' :disabled='busy || (!redirectUrl && !authCode)' @click='finishCallback()'>Finish</button>
+      <label>Calendar</label>
+      <select x-model='calendarId' @change='setCalendar()' :disabled='busy || calendars.length === 0'>
+        <option value=''>Choose a calendar</option>
+        <template x-for='c in calendars' :key='c.id'><option :value='c.id' x-text='c.summary'></option></template>
+      </select>
+      <button type='button' class='btn primary' :disabled='busy' @click='syncNow()'>Sync now</button>
+      <button type='button' class='btn' :disabled='busy' @click='disconnect()'>Disconnect</button>
+    </div>
+  </div>
+</body>
+</html>

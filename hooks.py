@@ -13,6 +13,9 @@ import time
 from usr.plugins.mech_calendar.helpers import sync
 from usr.plugins.mech_calendar.helpers import google_auth
 from usr.plugins.mech_calendar.helpers import google_poller
+from usr.plugins.mech_calendar.helpers.google_dependencies import (
+    ensure_google_dependencies,
+)
 
 
 
@@ -92,8 +95,9 @@ def _run_poller():
 
 
 def install(scheduler=None):
-    """Arm handoffs for existing events. Never breaks plugin activation."""
+    """Provision dependencies, then arm handoffs and start background sync."""
     global _poll_thread
+    ensure_google_dependencies()
     try:
         store = _store()
         sched = scheduler or _scheduler()

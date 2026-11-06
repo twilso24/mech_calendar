@@ -15,6 +15,7 @@ A local month/week calendar for Agent Zero — multiple calendars with colors an
 - All-day (`time` empty) and timed events, strict 24h `HH:MM` validation
 - Server-side JSON store (schema v6, cross-instance locking, reload-before-mutation, rev-guarded bulk writes) with atomic writes — data survives restarts
 - Runs inside Agent Zero: auth + CSRF handled by the framework
+- Marketplace installs provision the Google OAuth/API dependencies automatically before lifecycle startup.
 
 ## Open
 
@@ -57,6 +58,7 @@ Events are stored locally at `usr/plugins/mech_calendar/data/events.json` (forma
 ## Changelog
 
 ### 1.2.0
+- Marketplace install hardening: missing Google OAuth/API packages are provisioned in the active framework runtime with bounded installation and import validation.
 - Calendar registry (schema v5→v6): name, color, visibility, writable, source, `google_calendar_id`; sidebar list with color swatches, source, counts, and per-browser visibility (localStorage only, reapplied after async server load)
 - User-defined labels replace the seven fixed category presets (fresh stores start empty; v5 values migrate to labels; legacy `default` migrates to unlabeled; internal field stays `category`)
 - All-day strip above the grid + all-day markers in day cells, so strip and grid always agree; event markers use calendar color

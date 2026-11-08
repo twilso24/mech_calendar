@@ -52,12 +52,14 @@ Events are stored locally at `usr/plugins/mech_calendar/data/events.json` (forma
 
 ## Roadmap
 
-- v1.2.0 — ✅ shipped: Calendar.app parity + labels + Google two-way sync (see Changelog)
-- v1.3 — iCal import/export, sharing
+- v1.3.0 — ✅ shipped: label CRUD + collapsible all-day strip (see Changelog)
+- v1.4 — iCal import/export, sharing
 
 ## Changelog
 
-### 1.2.0
+### 1.3.0
+- Label CRUD: explicit `label_create` / `label_update` / `label_delete` API actions with `base_rev` optimistic locking, plus a label-management modal (create / edit / delete with confirmation) in the event editor; renames propagate to events, deletes unlabel events (`labels_save` retained for compatibility)
+- Collapsible all-day strip above the grid with event count and persisted collapsed state; strip capped at three rows with horizontal scrolling
 - Marketplace install hardening: missing Google OAuth/API packages are provisioned in the active framework runtime with bounded installation and import validation.
 - Calendar registry (schema v5→v6): name, color, visibility, writable, source, `google_calendar_id`; sidebar list with color swatches, source, counts, and per-browser visibility (localStorage only, reapplied after async server load)
 - User-defined labels replace the seven fixed category presets (fresh stores start empty; v5 values migrate to labels; legacy `default` migrates to unlabeled; internal field stays `category`)

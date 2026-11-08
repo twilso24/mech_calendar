@@ -639,6 +639,117 @@ class EventStore:
             self._persist()
             return json.loads(json.dumps(labels))
 
+    @staticmethod
+    def _validated_label_fields(raw, existing_labels, exclude_id=None):
+        """Validate name/color for one label against registry entries."""
+        if not isinstance(raw, dict):
+            raise ValueError('label must be an object')
+        name = raw.get('name')
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError('label name required')
+        name = name.strip()[:LABEL_NAME_MAX]
+        if name == 'default':
+            raise ValueError('label name reserved')
+        for label in existing_labels or []:
+            if not isinstance(label, dict):
+                continue
+            if exclude_id is not None and label.get('id') == exclude_id:
+                continue
+            existing_name = label.get('name')
+            if isinstance(existing_name, str) and existing_name.casefold() == name.casefold():
+                raise ValueError('duplicate label name')
+        color = raw.get('color', '#8e8e93')
+        if not isinstance(color, str) or not re.match(r'^#[0-9a-fA-F]{6}$', color):
+            raise ValueError('label color must be six-digit hex')
+        return name, color.lower()
+
+    def create_label(self, raw, base_rev=None):
+        """Create one label, assigning its stable id."""
+        with self._mutation_lock():
+            if base_rev is not None and base_rev != self._data.get('rev'):
+                raise StaleWriteError('store changed since read')
+            labels = self._data.get('labels') or []
+            name, color = self._validated_label_fields(raw, labels)
+            label_id = _label_id(name)
+            existing_ids = {label.get('id') for label in labels if isinstance(label, dict)}
+            if label_id in existing_ids:
+                label_id = 'lbl_' + secrets.token_hex(6)
+            label = {'id': label_id, 'name': name, 'color': color}
+            labels.append(label)
+            self._data['labels'] = labels
+            self._persist()
+            return json.loads(json.dumps(label))
+
+    def update_label(self, raw, base_rev=None):
+        """Update one label by stable id, reconciling event renames."""
+        if not isinstance(raw, dict):
+            raise ValueError('label must be an object')
+        with self._mutation_lock():
+            if base_rev is not None and base_rev != self._data.get('rev'):
+                raise StaleWriteError('store changed since read')
+            labels = self._data.get('labels') or []
+            label_id = raw.get('id')
+            target = next(
+                (label for label in labels
+                 if isinstance(label, dict) and label.get('id') == label_id),
+                None,
+            )
+            if target is None:
+                raise ValueError('label not found')
+            candidate = {
+                'name': raw.get('name', target.get('name')),
+                'color': raw.get('color', target.get('color', '#8e8e93')),
+            }
+            name, color = self._validated_label_fields(
+                candidate, labels, exclude_id=label_id)
+            old_name = target.get('name')
+            updated_events = 0
+            if old_name != name:
+                for day in self._data.get('events', {}).values():
+                    for event in day:
+                        if event.get('category') == old_name:
+                            event['category'] = name
+                            updated_events += 1
+            target['name'] = name
+            target['color'] = color
+            self._data['labels'] = labels
+            self._persist()
+            return {
+                'label': json.loads(json.dumps(target)),
+                'updated_events': updated_events,
+            }
+
+    def delete_label(self, label_id, base_rev=None):
+        """Delete one label by stable id, preserving its events unlabeled."""
+        with self._mutation_lock():
+            if base_rev is not None and base_rev != self._data.get('rev'):
+                raise StaleWriteError('store changed since read')
+            labels = self._data.get('labels') or []
+            target = next(
+                (label for label in labels
+                 if isinstance(label, dict) and label.get('id') == label_id),
+                None,
+            )
+            if target is None:
+                raise ValueError('label not found')
+            deleted = json.loads(json.dumps(target))
+            name = target.get('name')
+            unlabeled_events = 0
+            for day in self._data.get('events', {}).values():
+                for event in day:
+                    if event.get('category') == name:
+                        event['category'] = ''
+                        unlabeled_events += 1
+            self._data['labels'] = [
+                label for label in labels
+                if not (isinstance(label, dict) and label.get('id') == label_id)
+            ]
+            self._persist()
+            return {
+                'deleted': deleted,
+                'unlabeled_events': unlabeled_events,
+            }
+
     def save_calendar_setting(self, update, base_rev):
         """Atomically save one calendar's presentation fields if revision matches."""
         with self._mutation_lock():

@@ -188,6 +188,52 @@ class EventsApi(ApiHandler):
         if action == "labels":
             return {"ok": True, "labels": _get_store().get().get("labels", [])}
 
+        if action == "label_create":
+            base_rev = input.get("base_rev")
+            if base_rev is None:
+                return {"ok": False, "error": "revision required"}
+            try:
+                label = _get_store().create_label(input.get("label"), base_rev)
+            except StaleWriteError:
+                return {"ok": False, "error": "stale", "rev": _get_store().get()["rev"]}
+            except ValueError as exc:
+                return {"ok": False, "error": str(exc)}
+            return {"ok": True, "rev": _get_store().get()["rev"], "label": label}
+
+        if action == "label_update":
+            base_rev = input.get("base_rev")
+            if base_rev is None:
+                return {"ok": False, "error": "revision required"}
+            try:
+                result = _get_store().update_label(input.get("label"), base_rev)
+            except StaleWriteError:
+                return {"ok": False, "error": "stale", "rev": _get_store().get()["rev"]}
+            except ValueError as exc:
+                return {"ok": False, "error": str(exc)}
+            return {
+                "ok": True,
+                "rev": _get_store().get()["rev"],
+                "label": result["label"],
+                "updated_events": result["updated_events"],
+            }
+
+        if action == "label_delete":
+            base_rev = input.get("base_rev")
+            if base_rev is None:
+                return {"ok": False, "error": "revision required"}
+            try:
+                result = _get_store().delete_label(input.get("id"), base_rev)
+            except StaleWriteError:
+                return {"ok": False, "error": "stale", "rev": _get_store().get()["rev"]}
+            except ValueError as exc:
+                return {"ok": False, "error": str(exc)}
+            return {
+                "ok": True,
+                "rev": _get_store().get()["rev"],
+                "deleted": result["deleted"],
+                "unlabeled_events": result["unlabeled_events"],
+            }
+
         if action == "labels_save":
             base_rev = input.get("base_rev")
             if base_rev is None:

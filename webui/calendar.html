@@ -279,13 +279,18 @@
         }
 
         .all-day-strip {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-rows: repeat(3, auto);
+            grid-auto-flow: column;
+            grid-auto-columns: max-content;
             gap: 4px;
             padding: 4px 8px;
             min-height: 0;
             border-bottom: 1px solid var(--border-color);
             background: var(--bg-surface);
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
         }
         .all-day-strip:empty { display: none; }
         .all-day-chip {
@@ -1259,7 +1264,14 @@
                         </button>
                     </div>
                 </div>
-                <div id="allDayStrip" class="all-day-strip"></div>
+                <div class="all-day-section" id="allDaySection">
+                    <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;cursor:pointer;background:var(--bg-surface);border-bottom:1px solid var(--border-color)" id="allDayToggle" title="Click to expand/collapse">
+                        <span id="allDayChevron" style="font-size:10px;color:var(--accent-color);transition:transform 0.2s;min-width:16px">▼</span>
+                        <span style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);flex:1">ALL-DAY EVENTS</span>
+                        <span id="allDayCount" style="font-size:0.6rem;color:var(--text-muted);font-variant-numeric:tabular-nums">0</span>
+                    </div>
+                    <div id="allDayStrip" class="all-day-strip"></div>
+                </div>
                 <div class="calendar-view month-view" id="calendarGrid"></div>
             </div>
 
@@ -1318,9 +1330,10 @@
                 <div class="form-group">
                     <label id="catSelectLabel">LABEL</label>
                     <div class="cat-select-grid" id="catSelectGrid" role="radiogroup" aria-labelledby="catSelectLabel" tabindex="0"></div>
-                    <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
-                        <input type="text" id="newLabelInput" placeholder="New label..." maxlength="50" style="flex:1;padding:6px 8px;border:1px solid var(--border-color);border-radius:4px;font-size:12px">
-                        <button type="button" class="btn small" id="addLabelBtn" style="padding:6px 12px;font-size:11px">ADD</button>
+                    <div style="display:flex;gap:6px;align-items:center;margin-top:8px;min-width:0">
+                        <input type="text" id="newLabelInput" placeholder="New label..." maxlength="50" style="flex:1 1 auto;min-width:100px;padding:10px 12px;border:1px solid var(--border-color);border-radius:4px;font-size:16px">
+                        <button type="button" class="btn small" id="addLabelBtn" style="padding:6px 8px;font-size:12px;flex-shrink:0;white-space:nowrap;min-height:32px;width:auto;max-width:fit-content">ADD</button>
+                        <button type="button" class="btn small" id="manageLabelsBtn" style="padding:6px 8px;font-size:12px;flex-shrink:0;white-space:nowrap;min-height:32px;width:auto;max-width:fit-content" title="Manage labels">⚙</button>
                     </div>
                 </div>
 
@@ -1363,7 +1376,27 @@
         </div>
     </div>
 
-    <div style="position:fixed;bottom:4px;left:8px;z-index:1;font-size:0.62rem;letter-spacing:1px;color:var(--text-muted);opacity:0.55;pointer-events:none;user-select:none">BUILD 20260905A</div>
+    <!-- Label Management Modal -->
+    <div class="modal-overlay" id="labelManagerModal" role="dialog" aria-modal="true" aria-labelledby="labelManagerTitle">
+        <div class="modal" style="max-width:480px">
+            <h2 id="labelManagerTitle">// LABEL MANAGEMENT</h2>
+            <div id="labelManagerList" style="max-height:300px;overflow-y:auto;margin-bottom:15px"></div>
+            <div class="form-group" style="margin-bottom:10px">
+                <label>NEW LABEL NAME</label>
+                <input type="text" id="newLabelManagerInput" placeholder="Label name..." maxlength="50" style="width:100%;padding:14px 16px;background:#000;border:1px solid var(--border-color);color:#fff;font-family:var(--font-mono);font-size:16px;border-radius:0">
+            </div>
+            <div class="form-group" style="margin-bottom:10px">
+                <label>COLOR</label>
+                <input type="color" id="newLabelManagerColor" value="#ff3b30" style="width:60px;height:36px;border:none;background:transparent;cursor:pointer">
+            </div>
+            <div class="modal-actions" style="margin-top:20px">
+                <button type="button" class="btn" id="labelManagerCloseBtn" style="flex:1">DONE</button>
+                <button type="button" class="btn primary" id="labelManagerCreateBtn" style="flex:1">CREATE</button>
+            </div>
+        </div>
+    </div>
+
+    <div style="position:fixed;bottom:4px;left:8px;z-index:1;font-size:0.62rem;letter-spacing:1px;color:var(--text-muted);opacity:0.55;pointer-events:none;user-select:none">BUILD 20260905H</div>
     <script>
         'use strict';
 
@@ -1614,7 +1647,8 @@
             settings: {
                 viewMode: 'month',
                 catFilter: 'all',
-                modalCategory: ''
+                modalCategory: '',
+                allDayCollapsed: false
             }
         };
 
@@ -1758,8 +1792,18 @@
             drawerBackdrop: document.getElementById('drawerBackdrop'),
             catFilter: document.getElementById('catFilter'),
             catSelectGrid: document.getElementById('catSelectGrid'),
+            allDayToggle: document.getElementById('allDayToggle'),
+            allDayChevron: document.getElementById('allDayChevron'),
+            allDayCount: document.getElementById('allDayCount'),
             newLabelInput: document.getElementById('newLabelInput'),
             addLabelBtn: document.getElementById('addLabelBtn'),
+            manageLabelsBtn: document.getElementById('manageLabelsBtn'),
+            labelManagerModal: document.getElementById('labelManagerModal'),
+            labelManagerList: document.getElementById('labelManagerList'),
+            newLabelManagerInput: document.getElementById('newLabelManagerInput'),
+            newLabelManagerColor: document.getElementById('newLabelManagerColor'),
+            labelManagerCreateBtn: document.getElementById('labelManagerCreateBtn'),
+            labelManagerCloseBtn: document.getElementById('labelManagerCloseBtn'),
             toastContainer: document.getElementById('toastContainer')
         };
 
@@ -1845,6 +1889,188 @@
             showToast('Label added: ' + name, 'success');
         }
 
+        // ===== LABEL MANAGEMENT =====
+        function openLabelManager() {
+            if (!els.labelManagerModal || !els.labelManagerList) return;
+            renderLabelManagerList();
+            if (els.newLabelManagerInput) els.newLabelManagerInput.value = '';
+            if (els.newLabelManagerColor) els.newLabelManagerColor.value = '#ff3b30';
+            els.labelManagerModal.classList.add('active');
+            setTimeout(() => { if (els.newLabelManagerInput) els.newLabelManagerInput.focus(); }, 100);
+        }
+
+        function closeLabelManager() {
+            if (els.labelManagerModal) els.labelManagerModal.classList.remove('active');
+        }
+
+        function renderLabelManagerList() {
+            if (!els.labelManagerList) return;
+            const labels = state.labels || [];
+            if (labels.length === 0) {
+                els.labelManagerList.innerHTML = '<div class="no-data">// NO LABELS DEFINED</div>';
+                return;
+            }
+            els.labelManagerList.innerHTML = labels.map(label => {
+                const safeName = escapeHtml(label.name);
+                const safeColor = /^#[0-9a-fA-F]{6}$/.test(label.color || '') ? label.color : '#8e8e93';
+                const safeId = escapeHtml(label.id);
+                return `<div class="label-manager-row" style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--border-color);background:#000;margin-bottom:8px">
+                    <span style="width:16px;height:16px;border:1px solid var(--border-bright);background:${safeColor};flex-shrink:0"></span>
+                    <span style="flex:1;font-family:var(--font-mono);font-size:0.75rem;text-transform:uppercase;letter-spacing:1px">${safeName}</span>
+                    <span style="font-size:0.55rem;color:var(--text-muted);font-family:var(--font-mono)">${safeId}</span>
+                    <button type="button" class="btn small" data-action="edit" data-id="${safeId}" style="padding:4px 8px;font-size:10px">EDIT</button>
+                    <button type="button" class="btn small" data-action="delete" data-id="${safeId}" style="padding:4px 8px;font-size:10px;border-color:var(--cat-health);color:var(--cat-health)">DELETE</button>
+                </div>`;
+            }).join('');
+        }
+
+        async function createUserLabel() {
+            if (!els.newLabelManagerInput || !els.newLabelManagerColor) return;
+            const name = els.newLabelManagerInput.value.trim().slice(0, 50);
+            const color = els.newLabelManagerColor.value;
+            if (!name) {
+                showToast('Label name required', 'error');
+                return;
+            }
+            if ((state.labels || []).some(label => String(label.name).toLowerCase() === name.toLowerCase())) {
+                showToast('Label already exists', 'warning');
+                return;
+            }
+            if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
+                showToast('Invalid color', 'error');
+                return;
+            }
+            if (!API_MODE) {
+                state.labels.push({ id: 'lbl_' + Date.now().toString(36), name, color });
+                await saveLabels();
+                renderLabelManagerList();
+                renderCategoryFilter();
+                renderCategorySelect();
+                els.newLabelManagerInput.value = '';
+                showToast('Label created: ' + name, 'success');
+                return;
+            }
+            try {
+                const data = await apiCall({
+                    action: 'label_create',
+                    base_rev: state.rev,
+                    label: { name, color }
+                });
+                if (typeof data.rev === 'number') state.rev = data.rev;
+                const refreshed = await apiLoadFromServer();
+                if (!refreshed && data.label && !(state.labels || []).some(l => l.id === data.label.id)) {
+                    state.labels.push(data.label);
+                }
+                localStorage.setItem(STORAGE_KEYS.labels, JSON.stringify(state.labels));
+                renderLabelManagerList();
+                renderCategoryFilter();
+                renderCategorySelect();
+                els.newLabelManagerInput.value = '';
+                showToast('Label created: ' + name, 'success');
+            } catch (err) {
+                if (err && err.message === 'stale') {
+                    await apiLoadFromServer();
+                    renderLabelManagerList();
+                    showToast('Labels changed elsewhere — latest version loaded', 'warning');
+                } else {
+                    showToast('Create failed: ' + err.message, 'error');
+                }
+            }
+        }
+
+        async function editUserLabel(labelId) {
+            const label = (state.labels || []).find(l => l.id === labelId);
+            if (!label) return;
+            const newName = window.prompt('Edit label name:', label.name);
+            if (!newName || !newName.trim()) return;
+            const trimmed = newName.trim().slice(0, 50);
+            if (trimmed.toLowerCase() === label.name.toLowerCase()) return;
+            if ((state.labels || []).some(l => l.id !== labelId && String(l.name).toLowerCase() === trimmed.toLowerCase())) {
+                showToast('Label already exists', 'warning');
+                return;
+            }
+            if (!API_MODE) {
+                label.name = trimmed;
+                await saveLabels();
+                renderLabelManagerList();
+                renderCategoryFilter();
+                renderCategorySelect();
+                showToast('Label renamed to: ' + trimmed, 'success');
+                return;
+            }
+            try {
+                const data = await apiCall({
+                    action: 'label_update',
+                    base_rev: state.rev,
+                    label: { id: labelId, name: trimmed }
+                });
+                if (typeof data.rev === 'number') state.rev = data.rev;
+                const refreshed = await apiLoadFromServer();
+                if (!refreshed && data.label) {
+                    const existing = (state.labels || []).find(l => l.id === data.label.id);
+                    if (existing) Object.assign(existing, data.label);
+                }
+                localStorage.setItem(STORAGE_KEYS.labels, JSON.stringify(state.labels));
+                renderLabelManagerList();
+                renderCategoryFilter();
+                renderCategorySelect();
+                showToast('Label updated: ' + trimmed, 'success');
+            } catch (err) {
+                if (err && err.message === 'stale') {
+                    await apiLoadFromServer();
+                    renderLabelManagerList();
+                    showToast('Labels changed elsewhere — latest version loaded', 'warning');
+                } else {
+                    showToast('Update failed: ' + err.message, 'error');
+                }
+            }
+        }
+
+        async function deleteUserLabel(labelId) {
+            const label = (state.labels || []).find(l => l.id === labelId);
+            if (!label) return;
+            const count = Object.values(state.events || {}).flat().filter(e => (e.category || '') === label.name).length;
+            const msg = `Delete label "${label.name}"?\n\n${count} event${count !== 1 ? 's' : ''} using this label will become unlabeled.`;
+            if (!window.confirm(msg)) return;
+            if (!API_MODE) {
+                state.labels = (state.labels || []).filter(l => l.id !== labelId);
+                Object.values(state.events || {}).forEach(day => {
+                    day.forEach(e => { if (e.category === label.name) e.category = ''; });
+                });
+                await saveLabels();
+                renderLabelManagerList();
+                renderCategoryFilter();
+                renderCategorySelect();
+                showToast('Label deleted: ' + label.name, 'warning');
+                return;
+            }
+            try {
+                const data = await apiCall({
+                    action: 'label_delete',
+                    base_rev: state.rev,
+                    id: labelId
+                });
+                if (typeof data.rev === 'number') state.rev = data.rev;
+                const refreshed = await apiLoadFromServer();
+                if (!refreshed) {
+                    state.labels = (state.labels || []).filter(l => l.id !== labelId);
+                }
+                localStorage.setItem(STORAGE_KEYS.labels, JSON.stringify(state.labels));
+                renderLabelManagerList();
+                renderCategoryFilter();
+                renderCategorySelect();
+                showToast('Label deleted: ' + label.name, 'warning');
+            } catch (err) {
+                if (err && err.message === 'stale') {
+                    await apiLoadFromServer();
+                    renderLabelManagerList();
+                    showToast('Labels changed elsewhere — latest version loaded', 'warning');
+                } else {
+                    showToast('Delete failed: ' + err.message, 'error');
+                }
+            }
+        }
+
         // ===== TOAST NOTIFICATIONS =====
         function showToast(message, type, action) {
             type = type || 'info';
@@ -1888,6 +2114,8 @@
         function renderAllDayStrip() {
             const strip = document.getElementById('allDayStrip');
             if (!strip) return;
+            const countEl = document.getElementById('allDayCount');
+            const section = document.getElementById('allDaySection');
             strip.innerHTML = '';
             const year = state.currentDate.getFullYear();
             const month = state.currentDate.getMonth();
@@ -1913,7 +2141,20 @@
                     if (isAllDayEvent(evt)) allDayEvents.push({ dateStr: ds, evt });
                 });
             });
-            if (allDayEvents.length === 0) return;
+            // Update count display
+            if (countEl) countEl.textContent = allDayEvents.length;
+            // If no all-day events, hide the entire section
+            if (allDayEvents.length === 0) {
+                if (section) section.style.display = 'none';
+                return;
+            }
+            // Show section if there are events
+            if (section) section.style.display = 'block';
+            // Apply persisted collapsed state
+            const collapsed = state.settings.allDayCollapsed === true;
+            strip.style.display = collapsed ? 'none' : 'grid';
+            const chevron = document.getElementById('allDayChevron');
+            if (chevron) chevron.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
             allDayEvents.forEach(({ dateStr, evt }) => {
                 const chip = document.createElement('div');
                 chip.className = 'all-day-chip';
@@ -2930,7 +3171,40 @@
                     }
                 });
             }
-
+            if (els.manageLabelsBtn) {
+                els.manageLabelsBtn.addEventListener('click', openLabelManager);
+            }
+            if (els.labelManagerCloseBtn) {
+                els.labelManagerCloseBtn.addEventListener('click', closeLabelManager);
+            }
+            if (els.labelManagerCreateBtn) {
+                els.labelManagerCreateBtn.addEventListener('click', createUserLabel);
+            }
+            if (els.labelManagerList) {
+                els.labelManagerList.addEventListener('click', (ev) => {
+                    const btn = ev.target.closest('button[data-action]');
+                    if (!btn) return;
+                    const id = btn.dataset.id;
+                    if (btn.dataset.action === 'edit') editUserLabel(id);
+                    else if (btn.dataset.action === 'delete') deleteUserLabel(id);
+                });
+            }
+            if (els.allDayToggle && els.allDayChevron && els.allDayCount) {
+                // Load persisted collapsed state
+                const collapsed = state.settings.allDayCollapsed === true;
+                const strip = document.getElementById('allDayStrip');
+                if (strip) strip.style.display = collapsed ? 'none' : 'grid';
+                els.allDayChevron.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+                els.allDayToggle.addEventListener('click', () => {
+                    const strip = document.getElementById('allDayStrip');
+                    if (!strip) return;
+                    const isCollapsed = strip.style.display === 'none';
+                    strip.style.display = isCollapsed ? 'grid' : 'none';
+                    els.allDayChevron.style.transform = isCollapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
+                    state.settings.allDayCollapsed = !isCollapsed;
+                    saveSettings();
+                });
+            }
             // Export / Import
             els.btns.exportData.addEventListener('click', exportData);
             els.btns.importData.addEventListener('click', () => els.btns.importFile.click());
@@ -2959,7 +3233,7 @@
             window.addEventListener('resize', handleResize);
 
             // Prevent body scroll behind the mobile event drawer only.
-            // REGRESSION FIX (BUILD 20260905A): day-tap auto-opens the drawer,
+            // REGRESSION FIX (BUILD 20260905H): day-tap auto-opens the drawer,
             // so the edit sheet now regularly sits OVER the active drawer —
             // the old blanket guard cancelled every touchmove outside the
             // drawer, killing drag-scrolling inside the sheet and week grid.

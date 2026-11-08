@@ -5,7 +5,7 @@ export default async function registerMechCalendarSurface(canvas) {
         title: 'Calendar',
         icon: 'calendar_month',
         order: 55,
-        modalPath: '/plugins/mech_calendar/webui/canvas.html?v=20260905a',
+        modalPath: '/plugins/mech_calendar/webui/canvas.html?v=20260905h',
         actionOnly: false,
     });
     console.log('[Mech.Calendar] Registered as Canvas surface');
